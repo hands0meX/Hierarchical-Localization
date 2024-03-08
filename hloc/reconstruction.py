@@ -116,7 +116,7 @@ def main(
     image_list: Optional[List[str]] = None,
     image_options: Optional[Dict[str, Any]] = None,
     mapper_options: Optional[Dict[str, Any]] = None,
-    use_cache: bool = False,
+    overwrite: bool = True,
 ) -> pycolmap.Reconstruction:
     assert features.exists(), features
     assert pairs.exists(), pairs
@@ -125,7 +125,7 @@ def main(
     sfm_dir.mkdir(parents=True, exist_ok=True)
     database = sfm_dir / "database.db"
 
-    if not database.exists() or not use_cache:
+    if not database.exists() or overwrite:
         create_empty_db(database)
         import_images(image_dir, database, camera_mode, image_list, image_options)
         image_ids = get_image_ids(database)
