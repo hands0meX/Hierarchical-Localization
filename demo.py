@@ -1,17 +1,23 @@
+import os
 from pathlib import Path
+
+import numpy as np
 from hloc import extract_features, match_features, reconstruction, pairs_from_exhaustive
-import open3d as o3d
 import argparse
+import pycolmap
+from hloc.localize_sfm import QueryLocalizer, pose_from_cluster
+
 import open3d as o3d
+from open3d import io as o3d_io
 
 argparser = argparse.ArgumentParser(description='Reconstruct a dataset with hloc.')
-argparser.add_argument('-d','--dataset', type=str, default="outer", help='dataset name')
+argparser.add_argument('-d','--dataset', type=str, default="desk", help='dataset name')
 argparser.add_argument('-o', "--overwrite", action="store_true", help="use the cache of the matches")
-print(argparser.parse_args().overwrite)
+args = argparser.parse_args()
 
 def main():
     DEBUG = True
-    dataset = argparser.parse_args().dataset
+    dataset = args.dataset
     images = Path(f"datasets/{dataset}/")
     outputs = Path(f"outputs/{dataset}/")
 
@@ -33,7 +39,7 @@ def main():
         print(len(references), "mapping images")
         
     # 提取特征
-    extract_features.main(feature_conf, images, image_list=references, feature_path=features, as_half=False, overwrite=argparser.parse_args().overwrite)
+    extract_features.main(feature_conf, images, image_list=references, feature_path=features, as_half=False, overwrite=args.overwrite)
     # 图片配对
     pairs_from_exhaustive.main(sfm_pairs, image_list=references)
     # 配对图片的点位匹配
@@ -41,15 +47,52 @@ def main():
 
     # print("features:", features)
     # 三维重建
-    parseModel = reconstruction.main(overwrite=argparser.parse_args().overwrite, sfm_dir=sfm_dir, image_dir=images, pairs=sfm_pairs, features=features, matches=matches, image_list=references)
+    parseModel = reconstruction.main(overwrite=args.overwrite, sfm_dir=sfm_dir, image_dir=images, pairs=sfm_pairs, features=features, matches=matches, image_list=references)
 
-    # print(parseModel.summary())
-    # print(parseModel.points3D)
-    parseModel.export_PLY(outputs / "reconstruction.ply")
+    # 开始定位
+    if not (images / "query").exists():
+        os.mkdir(images / "query")
+        raise Exception("Please put the query images in the 'query' folder")
+
+    query_img = "query/query.jpg"
+    extract_features.main(
+        feature_conf, images, image_list=[query_img], feature_path=features, overwrite=True
+    )
+    pairs_from_exhaustive.main(loc_pairs, image_list=[query_img], ref_list=references)
+    match_features.main(
+        matcher_conf, loc_pairs, features=features, matches=matches, overwrite=True
+    )
+
+    camera = pycolmap.infer_camera_from_image(images / query_img)
+    ref_ids = [parseModel.find_image_with_name(r).image_id for r in references]
+    conf = {
+        "estimation": {"ransac": {"max_error": 12}},
+        "refinement": {"refine_focal_length": True, "refine_extra_params": True},
+    }
+    localizer = QueryLocalizer(parseModel, conf)
+    ret, log = pose_from_cluster(localizer, query_img, camera, ref_ids, features, matches)
+
+    print(f'found {ret["num_inliers"]}/{len(ret["inliers"])} inlier correspondences.')
+
+    pose = pycolmap.Image(cam_from_world=ret["cam_from_world"])
+    
 
     # 读取点云
-    pcd = o3d.io.read_point_cloud(str(outputs / "reconstruction.ply"))
-    o3d.visualization.draw_geometries([pcd])
+    parseModel.export_PLY(outputs / "reconstruction.ply")
+
+    world_t_camera = pose.cam_from_world.inverse()
+    rotation_camera = world_t_camera.rotation.matrix()
+    translation_camera = world_t_camera.translation
+    
+
+    point_cloud = o3d_io.read_point_cloud(str(outputs / "reconstruction.ply"))
+
+    point = np.dot(rotation_camera, [0, 0, 0]) + translation_camera
+    point_cloud.points.append(point)
+    point_cloud.colors.append([0, 1, 0])  # 绿色
+
+    # o3d.visualization.draw_geometries([point_cloud])
+    o3d_io.write_point_cloud(str(outputs / "reconstruction.ply"), point_cloud)
 
 main()
 
