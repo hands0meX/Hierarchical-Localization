@@ -1,0 +1,1 @@
+python ./slice_video.py --input ./office -n 9 && python ./demo.py -o -d office

@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+import shutil
+import warnings
 
 import numpy as np
 from hloc import extract_features, match_features, reconstruction, pairs_from_exhaustive
@@ -52,7 +54,12 @@ def main():
     # 开始定位
     if not (images / "query").exists():
         os.mkdir(images / "query")
-        raise Exception("Please put the query images in the 'query' folder")
+
+        # 找到 'mapping' 文件夹中的第一张图片
+        mapping_dir = images / "mapping/"
+        first_image = sorted(mapping_dir.glob('*.jpg'))[0]
+        shutil.copy2(first_image, images / "query" / "query.jpg")
+        warnings.warn("Please put the query images in the 'query' folder")
 
     query_img = "query/query.jpg"
     extract_features.main(

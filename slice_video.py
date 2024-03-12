@@ -4,7 +4,7 @@ import os
 import argparse
 
 argparser = argparse.ArgumentParser(description='Reconstruct a dataset with hloc.')
-argparser.add_argument('-s','--src', type=str, default="outer", help='mp4 path.')
+argparser.add_argument('-i','--input', type=str, default="outer", help='mp4 path.')
 argparser.add_argument("-n",'--frame_num', type=int, default=10, help="number of frames to extract")
 
 def extract_frames(video_path, output_dir, frame_num=10):
@@ -50,8 +50,8 @@ def extract_frames(video_path, output_dir, frame_num=10):
     print(f"Extracted {frame_count} frames from the video to {output_dir}")
 
 # Example usage
-video_path = f"{argparser.parse_args().src}.mp4"
-output_dir = f"datasets/{argparser.parse_args().src}/mapping/"
+video_path = f"{argparser.parse_args().input}.mp4"
+output_dir = f"datasets/{argparser.parse_args().input}/mapping/"
 frame_num = argparser.parse_args().frame_num  # Extract specified number of frames
 
 extract_frames(video_path, output_dir, frame_num)
