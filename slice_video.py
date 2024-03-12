@@ -4,10 +4,10 @@ import os
 import argparse
 
 argparser = argparse.ArgumentParser(description='Reconstruct a dataset with hloc.')
-argparser.add_argument('-d','--dataset', type=str, default="outer", help='dataset name')
-argparser.add_argument("-f",'--frame', type=int, default=2, help="frame rate for extracting frames")
+argparser.add_argument('-s','--src', type=str, default="outer", help='mp4 path.')
+argparser.add_argument("-n",'--frame_num', type=int, default=10, help="number of frames to extract")
 
-def extract_frames(video_path, output_dir, frame_rate=1):
+def extract_frames(video_path, output_dir, frame_num=10):
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file not found at the specified path: {video_path}")
     
@@ -21,12 +21,9 @@ def extract_frames(video_path, output_dir, frame_rate=1):
     # Open the video file
     video = cv2.VideoCapture(video_path)
     
-    # Get the total number of frames in the video
+    # Calculate the frame interval based on the desired number of frames
     total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    
-    # Calculate the frame interval based on the desired frame rate
-    frame_interval = int(video.get(cv2.CAP_PROP_FPS) / frame_rate)
-    
+    frame_interval = total_frames // frame_num
     # Initialize a counter for the extracted frames
     frame_count = 0
     
@@ -53,8 +50,8 @@ def extract_frames(video_path, output_dir, frame_rate=1):
     print(f"Extracted {frame_count} frames from the video to {output_dir}")
 
 # Example usage
-video_path = f"{argparser.parse_args().dataset}.mp4"
-output_dir = f"datasets/{argparser.parse_args().dataset}/mapping/"
-frame_rate = argparser.parse_args().frame  # Extract one frame per second
+video_path = f"{argparser.parse_args().src}.mp4"
+output_dir = f"datasets/{argparser.parse_args().src}/mapping/"
+frame_num = argparser.parse_args().frame_num  # Extract specified number of frames
 
-extract_frames(video_path, output_dir, frame_rate)
+extract_frames(video_path, output_dir, frame_num)

@@ -35,6 +35,15 @@ confs = {
             "features": "disk",
         },
     },
+    "disk+superglue-fast": {
+        "output": "matches-disk-superglue-it5",
+        "model": {
+            "name": "superglue",
+            "weights": "outdoor",
+            "sinkhorn_iterations": 50,
+            "features": "disk",
+        },
+    },
     "superglue": {
         "output": "matches-superglue",
         "model": {
