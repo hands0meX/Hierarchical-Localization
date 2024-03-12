@@ -47,7 +47,6 @@ def main():
     # 配对图片的点位匹配
     match_features.main(matcher_conf, sfm_pairs, features=features, matches=matches)
 
-    # print("features:", features)
     # 三维重建
     parseModel = reconstruction.main(overwrite=args.overwrite, sfm_dir=sfm_dir, image_dir=images, pairs=sfm_pairs, features=features, matches=matches, image_list=references)
 
@@ -71,7 +70,7 @@ def main():
     )
 
     camera = pycolmap.infer_camera_from_image(images / query_img)
-    ref_ids = [parseModel.find_image_with_name(r).image_id for r in references]
+    ref_ids = [parseModel.find_image_with_name(r).image_id for r in references if parseModel.find_image_with_name(r) is not None]
     conf = {
         "estimation": {"ransac": {"max_error": 12}},
         "refinement": {"refine_focal_length": True, "refine_extra_params": True},
