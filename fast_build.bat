@@ -1,0 +1,1 @@
+python ./slice_video.py --input %1 -n 20 && python ./sfm_build_behavior.py -o -d %1

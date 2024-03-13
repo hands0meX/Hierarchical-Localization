@@ -12,8 +12,14 @@ from hloc.localize_sfm import QueryLocalizer, pose_from_cluster
 import open3d as o3d
 from open3d import io as o3d_io
 
+import threading
+import time
+
 class HLocalizer:
     DEBUG = True
+    point_cloud = o3d.geometry.PointCloud()
+    colors_backup = []
+    points_backup = []
 
     @staticmethod
     def build(dataset, overwrite):
@@ -44,6 +50,7 @@ class HLocalizer:
         # 三维重建
         parseModel = reconstruction.main(overwrite=args.overwrite, sfm_dir=sfm_dir, image_dir=images, pairs=sfm_pairs, features=features, matches=matches, image_list=references)
         parseModel.export_PLY(outputs / "reconstruction.ply")
+        return parseModel
     
     @staticmethod
     def detect(dataset):
@@ -100,17 +107,44 @@ class HLocalizer:
         translation_camera = world_t_camera.translation
         if HLocalizer.DEBUG:
             print(f"最后的位姿, 旋转矩阵: {rotation_camera}, 相机位置: {translation_camera}")
+        
+        if __name__ != "__main__":
+            HLocalizer.point_cloud = o3d.io.read_point_cloud(f"outputs/{dataset}/reconstruction.ply")
+            # 恢复原来的颜色
+            # HLocalizer.point_cloud.colors = o3d.utility.Vector3dVector(HLocalizer.colors_backup)
+            # 恢复原来的点位置colors_backup
+            # HLocalizer.point_cloud.points = o3d.utility.Vector3dVector(HLocalizer.points_backup)
 
-        return rotation_camera, translation_camera
+            point = np.dot(rotation_camera, [0, 0, 0]) + translation_camera
+            HLocalizer.point_cloud.points.append(point)
+            HLocalizer.point_cloud.colors.append([1, 0, 0])
 
-        # point_cloud = o3d_io.read_point_cloud(str(outputs / "reconstruction.ply"))
+            HLocalizer.run_visualizer()
+            print("定位成功, 请查看窗口")
 
-        # point = np.dot(rotation_camera, [0, 0, 0]) + translation_camera
-        # point_cloud.points.append(point)
-        # point_cloud.colors.append([0, 1, 0])  # 绿色
+        return {"msg": "定位成功"}
+    
+    @staticmethod
+    def show_window(dataset):
+        if os.path.exists(f"outputs/{dataset}/reconstruction.ply"):
+            HLocalizer.point_cloud = o3d.io.read_point_cloud(f"outputs/{dataset}/reconstruction.ply")
+            HLocalizer.colors_backup = HLocalizer.point_cloud.colors
+            HLocalizer.points_backup = HLocalizer.point_cloud.points
+            print("Start the visualizer")
+            threading.Thread(target=HLocalizer.run_visualizer).start()
+        else:
+            print("Please build the sfm model first")
 
-        # # o3d.visualization.draw_geometries([point_cloud])
-        # o3d_io.write_point_cloud(str(outputs / "reconstruction.ply"), point_cloud)
+    @staticmethod
+    def run_visualizer():
+        vis = o3d.visualization.Visualizer()
+        vis.create_window()
+        time.sleep(0.1)
+        vis.add_geometry(HLocalizer.point_cloud)
+        while vis.poll_events():
+            vis.update_geometry(HLocalizer.point_cloud)
+            vis.update_renderer()
+        vis.destroy_window()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='SFM build and detect')

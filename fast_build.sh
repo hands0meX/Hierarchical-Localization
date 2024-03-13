@@ -1,1 +1,1 @@
-python ./slice_video.py --input ./desk -n 9 && python ./sfm_build_behavior.py -o -d desk
+python ./slice_video.py --input $1 -n 9 && python ./sfm_build_behavior.py -o -d $1

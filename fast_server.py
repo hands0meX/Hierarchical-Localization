@@ -1,8 +1,11 @@
+import argparse
 import os
 from fastapi import FastAPI, Request
 import numpy as np
 import cv2
 from typing import Optional
+
+import uvicorn
 from sfm_build_behavior import HLocalizer
 
 app = FastAPI()
@@ -35,7 +38,16 @@ async def match(request: Request, w: int, h: int, dataset: str):
 
     gray_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2GRAY_420)
     gray_rotated = cv2.rotate(gray_image, cv2.ROTATE_90_CLOCKWISE)
-    output_file = f"datasets/{dataset}/query.jpg"
+    output_file = f"datasets/{dataset}/query/query.jpg"
     cv2.imwrite(output_file, gray_rotated)
 
     return HLocalizer.detect(dataset)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', "--dataset", type=str, default="home")
+    args = parser.parse_args()
+
+    HLocalizer.show_window(args.dataset)
+    uvicorn.run("fast_server:app", host="0.0.0.0", port=8000, reload=True)
