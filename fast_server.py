@@ -1,7 +1,9 @@
+import os
 from fastapi import FastAPI, Request
 import numpy as np
 import cv2
 from typing import Optional
+from sfm_build_behavior import HLocalizer
 
 app = FastAPI()
 
@@ -10,7 +12,10 @@ async def read_root():
     return {"message": "Hello World!"}
 
 @app.post("/match/")
-async def match(request: Request, w: int, h: int, dataset: Optional[str] = "foo"):
+async def match(request: Request, w: int, h: int, dataset: str):
+    if not os.path.exists(f"datasets/{dataset}"):
+        return {"message": "还没有构建模型"}
+
     sum_buffer = await request.body()
     width = w
     height = h
@@ -29,5 +34,8 @@ async def match(request: Request, w: int, h: int, dataset: Optional[str] = "foo"
                                 axis=0)
 
     gray_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2GRAY_420)
-    cv2.imwrite("outputs/desk/query.jpg", gray_image)
-    return {"message": "Matched!"}
+    gray_rotated = cv2.rotate(gray_image, cv2.ROTATE_90_CLOCKWISE)
+    output_file = f"datasets/{dataset}/query.jpg"
+    cv2.imwrite(output_file, gray_rotated)
+
+    return HLocalizer.detect(dataset)

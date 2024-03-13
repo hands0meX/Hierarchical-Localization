@@ -1,1 +1,1 @@
-python ./slice_video.py --input ./office -n 9 && python ./demo.py -o -d office
+python ./slice_video.py --input ./desk -n 9 && python ./sfm_build_behavior.py -o -d desk
